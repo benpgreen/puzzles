@@ -1,0 +1,9 @@
+*.pyc
+.ipynb_checkpoints
+brio.egg-info/
+build/
+dist/
+*.pkl
+.idea/
+*.csv
+*.egg-info/
