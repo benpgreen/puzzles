@@ -2,10 +2,11 @@ import numpy as np
 
 from tqdm import tqdm
 
-TRACK_SE = "\u250c"
-TRACK_SW = "\u2510"
-TRACK_NE = "\u2514"
-TRACK_NW = "\u2518"
+
+TRACK_SE = "\u256d"
+TRACK_SW = "\u256e"
+TRACK_NW = "\u256f"
+TRACK_NE = "\u2570"
 
 
 test = {
@@ -224,4 +225,11 @@ class TrainTrack:
         self._count_to_pos = self._count_to_pos
         self._possible_entries = self._possible_entries
         self.solution = solution
-        return solution
+        self.viz()
+
+    def viz(self):
+        print(" ".join([str(n) for n in self.x]))
+        for idx, row in enumerate(self.solution):
+            r = row.copy()
+            r[r == ""] = "."
+            print(" ".join(r) + f" {self.y[idx]}")
