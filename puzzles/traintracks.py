@@ -1,5 +1,6 @@
 import numpy as np
 
+from tqdm import tqdm
 
 TRACK_SE = "\u250c"
 TRACK_SW = "\u2510"
@@ -23,6 +24,18 @@ test3 = {
     "tracks": [(4, 0, TRACK_SW), (4, 3, TRACK_NE), (5, 4, "|")],
     "x": [2, 3, 3, 4, 6, 2],
     "y": [2, 3, 3, 5, 4, 3]
+}
+
+test200 = {
+    "tracks": [(6, 0, TRACK_NW), (9, 0, "|"), (3, 9, TRACK_NW)],
+    "x": [7, 8, 3, 4, 7, 4, 3, 4, 2, 2],
+    "y": [7, 6, 6, 4, 5, 3, 5, 6, 1, 1]
+}
+
+test31 = {
+    "tracks": [(4, 0, TRACK_SW), (7, 7, "|")],
+    "x": [2, 1, 2, 5, 3, 1, 7, 8],
+    "y": [4, 4, 5, 3, 5, 5, 2, 1]
 }
 
 simple = {
@@ -72,6 +85,8 @@ class TrainTrack:
         self.end = (ends[1][0], ends[1][1])
 
         self.options = [".", "-", "|", TRACK_NE, TRACK_NW, TRACK_SE, TRACK_SW]
+        if self.x.sum() != self.y.sum():
+            raise ValueError(f"Invalid x and y args, must sum to same total")
         self._count = self.x.sum()
 
     def _is_valid(self, T):
@@ -128,13 +143,15 @@ class TrainTrack:
             )
         return i, j, direction
 
-    def solve(self):
+    def solve(self, verbose=False):
         count = 0
         i, j, direction = self.start
         T = self.track.copy()
         self._possible_entries = {}
         self._count_to_pos = {}
         new_layer = True
+        if verbose:
+            pbar = tqdm()
 
         while count < self._count:
 
@@ -215,6 +232,9 @@ class TrainTrack:
                         new_layer = False
                         i, j, direction = self._count_to_pos[count]
                         T = self._possible_entries[count][2].copy()
+
+            if verbose:
+                pbar.update(1)
 
         solution = self._possible_entries[self._count - 1][2]
         self._count_to_pos = self._count_to_pos
