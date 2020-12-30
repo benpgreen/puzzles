@@ -58,30 +58,14 @@ class TrainTrack:
         for i, j, entry in track_locations:
             self.track[i, j] = entry
             self.track_locations.add((i, j))
-            if i == 0 and entry == "|":
+            if i == 0 and entry in ("|", TRACK_NE, TRACK_NW):
                 ends.append((i, j, "S"))
-            elif i == 0 and entry == TRACK_NE:
-                ends.append((i, j, "E"))
-            elif i == 0 and entry == TRACK_NW:
-                ends.append((i, j, "W"))
-            elif i == X - 1 and entry == "|":
+            elif i == X - 1 and entry in ("|", TRACK_SE, TRACK_SW):
                 ends.append((i, j, "N"))
-            elif i == X - 1 and entry == TRACK_SE:
+            elif j == 0 and entry in ("-", TRACK_NW, TRACK_SW):
                 ends.append((i, j, "E"))
-            elif i == X - 1 and entry == TRACK_SW:
+            elif j == Y - 1 and entry in ("-", TRACK_NE, TRACK_SE):
                 ends.append((i, j, "W"))
-            elif j == 0 and entry == "-":
-                ends.append((i, j, "E"))
-            elif j == 0 and entry == TRACK_NW:
-                ends.append((i, j, "N"))
-            elif j == 0 and entry == TRACK_SW:
-                ends.append((i, j, "S"))
-            elif j == Y - 1 and entry == "-":
-                ends.append((i, j, "W"))
-            elif j == Y - 1 and entry == TRACK_NE:
-                ends.append((i, j, "N"))
-            elif j == Y - 1 and entry == TRACK_SE:
-                ends.append((i, j, "S"))
         if len(ends) != 2:
             raise ValueError(f"{len(ends)} ends found: {ends}")
         self.start = ends[0]
@@ -153,6 +137,7 @@ class TrainTrack:
         new_layer = True
 
         while count < self._count:
+
             if i < 0 or j < 0 or i >= len(self.x) or j >= len(self.y):
                 # gone out of bounds, send back
                 count -= 1
