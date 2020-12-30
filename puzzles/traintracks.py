@@ -1,7 +1,4 @@
 import numpy as np
-import itertools
-
-from tqdm import tqdm
 
 
 TRACK_SE = "\u250c"
@@ -16,6 +13,18 @@ test = {
     "y": [5, 3, 4, 4, 4, 4]
 }
 
+test2 = {
+    "tracks": [(0, 0, TRACK_SW), (4, 3, "-"), (5, 0, "|")],
+    "x": [5, 2, 3, 3, 4, 3],
+    "y": [1, 1, 5, 4, 6, 3]
+}
+
+test3 = {
+    "tracks": [(4, 0, TRACK_SW), (4, 3, TRACK_NE), (5, 4, "|")],
+    "x": [2, 3, 3, 4, 6, 2],
+    "y": [2, 3, 3, 5, 4, 3]
+}
+
 simple = {
     "tracks": [(0, 3, "-"), (3, 0, "-")],
     "x": [3, 4, 3, 1],
@@ -27,12 +36,6 @@ really_simple = {
     "x": [3, 3, 2],
     "y": [2, 3, 3]
 }
-
-full_track = [
-    (2, 0, "-"), (2, 1, "-"), (2, 2, TRACK_NW),
-    (1, 2, TRACK_SW), (1, 1, "-"), (1, 0, TRACK_NE),
-    (0, 0, TRACK_SE), (0, 1, TRACK_NW)
-]
 
 
 class TrainTrack:
@@ -51,97 +54,41 @@ class TrainTrack:
         self.track = np.array([["" for _ in range(Y)] for __ in range(X)])
 
         ends = []
+        self.track_locations = set()
         for i, j, entry in track_locations:
             self.track[i, j] = entry
-            if i == 0 and entry in ("|", TRACK_NE, TRACK_NW):
+            self.track_locations.add((i, j))
+            if i == 0 and entry == "|":
                 ends.append((i, j, "S"))
-            elif i == X - 1 and entry in ("|", TRACK_SE, TRACK_SW):
-                ends.append((i, j, "N"))
-            elif j == 0 and entry in ("-", TRACK_NW, TRACK_SW):
+            elif i == 0 and entry == TRACK_NE:
                 ends.append((i, j, "E"))
-            elif j == Y - 1 and entry in ("-", TRACK_NE, TRACK_SE):
+            elif i == 0 and entry == TRACK_NW:
                 ends.append((i, j, "W"))
+            elif i == X - 1 and entry == "|":
+                ends.append((i, j, "N"))
+            elif i == X - 1 and entry == TRACK_SE:
+                ends.append((i, j, "E"))
+            elif i == X - 1 and entry == TRACK_SW:
+                ends.append((i, j, "W"))
+            elif j == 0 and entry == "-":
+                ends.append((i, j, "E"))
+            elif j == 0 and entry == TRACK_NW:
+                ends.append((i, j, "N"))
+            elif j == 0 and entry == TRACK_SW:
+                ends.append((i, j, "S"))
+            elif j == Y - 1 and entry == "-":
+                ends.append((i, j, "W"))
+            elif j == Y - 1 and entry == TRACK_NE:
+                ends.append((i, j, "N"))
+            elif j == Y - 1 and entry == TRACK_SE:
+                ends.append((i, j, "S"))
         if len(ends) != 2:
             raise ValueError(f"{len(ends)} ends found: {ends}")
         self.start = ends[0]
         self.end = (ends[1][0], ends[1][1])
 
         self.options = [".", "-", "|", TRACK_NE, TRACK_NW, TRACK_SE, TRACK_SW]
-
-        possible_entries = {}
-        count_to_pos = {}
-        counter = 0
-        for i, j in itertools.product(range(X), range(Y)):
-            if self.track[i, j] == "":
-                # next number to check, current puzzle
-                possible_entries[counter] = [0, None]
-                count_to_pos[counter] = (i, j)
-                counter += 1
-        self._possible_entries = possible_entries
-        self._count_to_pos = count_to_pos
-        self._count = counter
-
-    def _is_path(self, T):
-        i, j, direction = self.start
-        path = {(i, j)}
-        output = True
-
-        while (i, j) != self.end and output:
-
-            if direction == "E":
-                j += 1
-            elif direction == "W":
-                j -= 1
-            elif direction == "N":
-                i -= 1
-            elif direction == "S":
-                i += 1
-            else:
-                raise RuntimeError(f"Invalid direction: {direction}")
-
-            if i >= 0 and j >= 0 and i < len(self.x) and j < len(self.y):
-                entry = T[i, j]
-            else:
-                output = False
-                break
-
-            if entry == TRACK_NW and direction == "E":
-                direction = "N"
-            elif entry == TRACK_NW and direction == "S":
-                direction = "W"
-            elif entry == TRACK_SE and direction == "W":
-                direction = "S"
-            elif entry == TRACK_SE and direction == "N":
-                direction = "E"
-            elif entry == TRACK_SW and direction == "E":
-                direction = "S"
-            elif entry == TRACK_SW and direction == "N":
-                direction = "W"
-            elif entry == TRACK_NE and direction == "S":
-                direction = "E"
-            elif entry == TRACK_NE and direction == "W":
-                direction = "N"
-            elif (
-                (entry == "-" and direction in ("E", "W")) or
-                (entry == "|" and direction in ("N", "S"))
-            ):
-                pass
-            elif entry == "":  # path incomplete
-                break
-            else:
-                output = False
-
-            path.add((i, j))
-
-        if (i, j) == self.end and output:  # check for full path
-            for (a, b) in itertools.product(
-                    range(len(self.x)), range(len(self.y))
-                    ):
-                if (a, b) not in path and T[a, b] not in (".", ""):
-                    output = False
-                    break
-
-        return output
+        self._count = self.x.sum()
 
     def _is_valid(self, T):
         if (((T != ".") & (T != "")).sum(axis=0) > self.x).any():
@@ -153,36 +100,138 @@ class TrainTrack:
         elif ((T != ".").sum(axis=1) < self.y).any():
             output = False
         else:
-            output = self._is_path(T)
+            output = True
         return output
 
-    def solve(self, verbose=True):
-        i = 0
+    def _adjust_position(self, i, j, entry, direction, check=False):
+        if direction == "E" and entry == "-":
+            j += 1
+        elif direction == "E" and entry == TRACK_NW:
+            i -= 1
+            direction = "N"
+        elif direction == "E" and entry == TRACK_SW:
+            i += 1
+            direction = "S"
+        elif direction == "W" and entry == "-":
+            j -= 1
+        elif direction == "W" and entry == TRACK_NE:
+            i -= 1
+            direction = "N"
+        elif direction == "W" and entry == TRACK_SE:
+            i += 1
+            direction = "S"
+        elif direction == "N" and entry == "|":
+            i -= 1
+        elif direction == "N" and entry == TRACK_SE:
+            j += 1
+            direction = "E"
+        elif direction == "N" and entry == TRACK_SW:
+            j -= 1
+            direction = "W"
+        elif direction == "S" and entry == "|":
+            i += 1
+        elif direction == "S" and entry == TRACK_NE:
+            j += 1
+            direction = "E"
+        elif direction == "S" and entry == TRACK_NW:
+            j -= 1
+            direction = "W"
+        elif check:
+            direction = None
+        else:
+            raise RuntimeError(
+                f"Invalid i, j, entry, direction: {i, j, entry, direction}"
+            )
+        return i, j, direction
+
+    def solve(self):
+        count = 0
+        i, j, direction = self.start
         T = self.track.copy()
-        possible_entries = self._possible_entries
-        if verbose:
-            pbar = tqdm()
-        while i < self._count:
-            idx = possible_entries[i][0]
-            x, y = self._count_to_pos[i]
-            while idx < len(self.options):
-                T[x, y] = self.options[idx]
-                if self._is_valid(T):
-                    break
-                idx += 1
-            if idx < len(self.options):
-                possible_entries[i] = [idx + 1, T.copy()]
-                i += 1
+        self._possible_entries = {}
+        self._count_to_pos = {}
+        new_layer = True
+
+        while count < self._count:
+            if i < 0 or j < 0 or i >= len(self.x) or j >= len(self.y):
+                # gone out of bounds, send back
+                count -= 1
+                self._possible_entries[count][0] += 1
+                new_layer = False
+                i, j, direction = self._count_to_pos[count]
+                T = self._possible_entries[count][2].copy()
             else:
-                possible_entries[i] = [0, None]
-                i -= 1
-                T = possible_entries[i][1].copy()
-            if verbose:
-                pbar.update(1)
 
-        solution = possible_entries[self._count - 1][1]
+                if new_layer:
+                    # gone into a new layer, so need to initialise it
+                    if (i, j) in self.track_locations:
+                        options = [T[i, j]]
+                        d = self._adjust_position(
+                            i, j, options[0], direction, check=True
+                        )[-1]
+                        if d is None:
+                            T[i, j] = ""
+                            count -= 1
+                            self._possible_entries[count][0] += 1
+                            new_layer = False
+                            i, j, direction = self._count_to_pos[count]
+                            T = self._possible_entries[count][2].copy()
+                            continue
+                    elif T[i, j] != "":
+                        T[i, j] = ""
+                        count -= 1
+                        self._possible_entries[count][0] += 1
+                        new_layer = False
+                        i, j, direction = self._count_to_pos[count]
+                        T = self._possible_entries[count][2].copy()
+                        continue
+                    elif direction == "E":
+                        options = ["-", TRACK_NW, TRACK_SW]
+                    elif direction == "W":
+                        options = ["-", TRACK_NE, TRACK_SE]
+                    elif direction == "N":
+                        options = ["|", TRACK_SW, TRACK_SE]
+                    elif direction == "S":
+                        options = ["|", TRACK_NW, TRACK_NE]
+                    else:
+                        raise RuntimeError("WTF!")
+
+                    entry = options[0]
+                    T[i, j] = entry
+                    if self._is_valid(T):  # then log this
+                        self._possible_entries[count] = [0, options, T.copy()]
+                        self._count_to_pos[count] = i, j, direction
+                        i, j, direction = self._adjust_position(
+                            i, j, entry, direction
+                        )
+                        count += 1
+                        new_layer = True
+                    else:
+                        T[i, j] = ""
+                        count -= 1
+                        self._possible_entries[count][0] += 1
+                        new_layer = False
+                        i, j, direction = self._count_to_pos[count]
+                        T = self._possible_entries[count][2].copy()
+                else:
+                    idx = self._possible_entries[count][0]
+                    if idx < len(self._possible_entries[count][1]):
+                        entry = self._possible_entries[count][1][idx]
+                        T[i, j] = entry
+                        self._possible_entries[count][2] = T.copy()
+                        i, j, direction = self._adjust_position(
+                            i, j, entry, direction
+                        )
+                        count += 1
+                        new_layer = True
+                    else:
+                        count -= 1
+                        self._possible_entries[count][0] += 1
+                        new_layer = False
+                        i, j, direction = self._count_to_pos[count]
+                        T = self._possible_entries[count][2].copy()
+
+        solution = self._possible_entries[self._count - 1][2]
+        self._count_to_pos = self._count_to_pos
+        self._possible_entries = self._possible_entries
         self.solution = solution
-
-        if verbose:
-            for row in solution:
-                print("".join(row))
