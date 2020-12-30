@@ -90,13 +90,9 @@ class TrainTrack:
         self._count = self.x.sum()
 
     def _is_valid(self, T):
-        if (((T != ".") & (T != "")).sum(axis=0) > self.x).any():
+        if ((T != "").sum(axis=0) > self.x).any():
             output = False
-        elif ((T != ".").sum(axis=0) < self.x).any():
-            output = False
-        elif (((T != ".") & (T != "")).sum(axis=1) > self.y).any():
-            output = False
-        elif ((T != ".").sum(axis=1) < self.y).any():
+        elif ((T != "").sum(axis=1) > self.y).any():
             output = False
         else:
             output = True
