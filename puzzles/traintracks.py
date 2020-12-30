@@ -220,3 +220,4 @@ class TrainTrack:
         self._count_to_pos = self._count_to_pos
         self._possible_entries = self._possible_entries
         self.solution = solution
+        return solution
